@@ -1,0 +1,45 @@
+name: Fetch Bitcoin Markets
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  fetch-markets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Run market fetch script
+        run: |
+          echo 'const https = require("https");
+
+          const url = "https://api.coincap.io/v2/assets/bitcoin/markets";
+          const exchangesToFind = ["binance", "coinex", "coinbase pro", "bitfinex", "kucoin"];
+
+          https.get(url, (response) => {
+            let data = "";
+
+            response.on("data", (chunk) => {
+              data += chunk;
+            });
+
+            response.on("end", () => {
+              const markets = JSON.parse(data).data;
+              const result = markets.filter(market =>
+                exchangesToFind.includes(market.exchangeId.toLowerCase()) &&
+                market.baseSymbol === "BTC" &&
+                market.quoteSymbol === "USDT"
+              ).map(market => `Exchange: ${market.exchangeId}, Price: ${market.priceUsd} USD`);
+
+              console.log(result.join("\\n"));
+            });
+          }).on("error", (e) => {
+            console.error(e.message);
+          });' > markets.js
+          node markets.js
